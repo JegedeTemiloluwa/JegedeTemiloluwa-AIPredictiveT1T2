@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DiaGuard AI | Your AI Health Companion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── DESIGN TOKENS (from Flutter main.dart) ── */
+    :root {
+      --bg:        #0F172A; /* scaffoldBackgroundColor / Slate 900 */
+      --surface:   #1E293B; /* colorScheme.surface / Slate 800 */
+      --primary:   #2DD4BF; /* primaryColor / Teal 400 */
+      --secondary: #10B981; /* colorScheme.secondary / Emerald 500 */
+      --white:     #F8FAFC;
+      --white60:   rgba(255,255,255,0.6);
+      --white50:   rgba(255,255,255,0.5);
+      --white38:   rgba(255,255,255,0.38);
+      --white20:   rgba(255,255,255,0.2);
+      --white10:   rgba(255,255,255,0.10);
+      --white05:   rgba(255,255,255,0.05);
+      --green:     #69F0AE;
+      --orange:    #FFA726;
+      --red:       #EF5350;
+      --amber:     #FFC107;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body {
+      height: 100%;
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      overflow: hidden;
+    }
+
+    /* ── SCREEN ROUTER ── */
+    .screen { display:none; width:100%; height:100vh; overflow-y:auto; }
+    .screen.active { display:flex; flex-direction:column; }
+
+    /* ── SPLASH ── */
+    #splash {
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+    }
+    .splash-content {
+      display: flex; flex-direction: column; align-items: center; gap: 24px;
+      opacity: 0; animation: fadeIn 2s ease forwards;
+    }
+    .splash-icon-ring {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: rgba(45,212,191,0.1);
+      border: 2px solid var(--primary);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .splash-icon-ring svg { width:60px; height:60px; fill:var(--primary); }
+    .splash-title { font-size:2.2rem; font-weight:700; letter-spacing:1.2px; }
+    .splash-sub { font-size:1rem; color:var(--white60); }
+
+    /* ── ONBOARDING ── */
+    #onboarding {
+      background: var(--bg);
+      justify-content: space-between;
+      padding-top: env(safe-area-inset-top, 0);
+    }
+    .onboard-skip {
+      position: absolute; top:24px; right:24px;
+      background: none; border: none; cursor: pointer;
+      color: var(--primary); font-size:1rem; font-weight:700; font-family:'Outfit',sans-serif;
+    }
+    .onboard-slides { flex:1; position:relative; overflow:hidden; }
+    .onboard-slide {
+      position:absolute; inset:0; display:none;
+      flex-direction:column; align-items:center; justify-content:center;
+      padding: 40px; text-align:center;
+    }
+    .onboard-slide.active { display:flex; }
+    .onboard-icon-circle {
+      width:200px; height:200px; border-radius:50%;
+      background: rgba(45,212,191,0.05);
+      display:flex; align-items:center; justify-content:center; margin-bottom:60px;
+    }
+    .onboard-icon-circle svg { width:100px; height:100px; fill:var(--primary); }
+    .onboard-slide h2 { font-size:1.8rem; font-weight:700; margin-bottom:20px; }
+    .onboard-slide p  { font-size:1rem; color:var(--white60); line-height:1.6; max-width:320px; }
+    .onboard-footer {
+      padding:40px; display:flex;
+      align-items:center; justify-content:space-between;
+    }
+    .dots { display:flex; gap:8px; align-items:center; }
+    .dot {
+      height:8px; border-radius:4px;
+      background:var(--white20); transition: all 0.3s;
+    }
+    .dot.active { background:var(--primary); width:24px; }
+    .dot:not(.active) { width:8px; }
+    .btn-primary {
+      background: var(--primary); color:#000; border:none; cursor:pointer;
+      padding:14px 32px; border-radius:16px; font-size:1rem;
+      font-weight:700; font-family:'Outfit',sans-serif; transition:0.2s;
+    }
+    .btn-primary:hover { opacity:0.9; transform:translateY(-1px); }
+    .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+
+    /* ── AUTH SCREENS (Login / Signup) ── */
+    #login, #signup {
+      background: linear-gradient(to bottom, var(--bg), var(--surface));
+    }
+    .auth-scroll { flex:1; overflow-y:auto; padding:32px; }
+    .auth-back {
+      background:none; border:none; cursor:pointer;
+      color:var(--white); padding:0; margin-bottom:24px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .auth-back svg { width:24px; height:24px; fill:var(--white); }
+    .auth-icon-circle {
+      width:72px; height:72px; border-radius:50%;
+      background:rgba(45,212,191,0.1);
+      display:flex; align-items:center; justify-content:center; margin-bottom:32px;
+    }
+    .auth-icon-circle svg { width:40px; height:40px; fill:var(--primary); }
+    .auth-title { font-size:2rem; font-weight:700; margin-bottom:8px; }
+    .auth-sub { font-size:1rem; color:var(--white50); margin-bottom:48px; }
+    .field-label { font-size:0.875rem; color:rgba(255,255,255,0.7); margin-bottom:8px; display:block; }
+    .field-wrap { position:relative; margin-bottom:24px; }
+    .field-icon {
+      position:absolute; left:14px; top:50%; transform:translateY(-50%);
+      width:22px; height:22px; fill:var(--white38); pointer-events:none;
+    }
+    .field-toggle {
+      position:absolute; right:14px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; padding:0;
+      display:flex; align-items:center;
+    }
+    .field-toggle svg { width:22px; height:22px; fill:var(--white38); }
+    .auth-input {
+      width:100%; padding:16px 16px 16px 46px;
+      background:var(--white05); border:none; border-radius:16px;
+      color:var(--white); font-size:1rem; font-family:'Outfit',sans-serif;
+      outline:none; transition:0.2s;
+    }
+    .auth-input:focus { box-shadow: 0 0 0 1.5px rgba(45,212,191,0.5); }
+    .auth-input.has-toggle { padding-right:46px; }
+    .auth-error { color:#EF5350; font-size:0.875rem; margin:-16px 0 16px; }
+    .btn-full {
+      width:100%; height:56px; background:var(--primary); color:#000;
+      border:none; border-radius:16px; font-size:1.125rem;
+      font-weight:700; font-family:'Outfit',sans-serif;
+      cursor:pointer; transition:0.2s; margin-bottom:32px;
+    }
+    .btn-full:hover { opacity:0.9; }
+    .auth-switch { display:flex; align-items:center; justify-content:center; gap:4px; }
+    .auth-switch span { color:var(--white50); font-size:0.9rem; }
+    .auth-switch button {
+      background:none; border:none; cursor:pointer;
+      color:var(--primary); font-weight:700; font-size:0.9rem;
+      font-family:'Outfit',sans-serif;
+    }
+
+    /* ── INPUT SCREEN ── */
+    #input-screen {
+      background: var(--bg);
+    }
+    .app-bar {
+      display:flex; align-items:center; gap:12px;
+      padding:16px 20px; flex-shrink:0;
+    }
+    .app-bar-back {
+      background:none; border:none; cursor:pointer; padding:4px;
+    }
+    .app-bar-back svg { width:24px; height:24px; fill:var(--white); }
+    .app-bar h1 { font-size:1.25rem; font-weight:700; }
+    .input-body { flex:1; overflow-y:auto; padding:0 24px 48px; }
+    .page-title { font-size:1.5rem; font-weight:700; margin-bottom:8px; }
+    .page-sub { color:var(--white50); margin-bottom:32px; font-size:0.95rem; }
+    .section-header {
+      font-size:0.75rem; font-weight:700; letter-spacing:1.5px;
+      color:var(--primary); text-transform:uppercase;
+      padding:16px 0 8px;
+    }
+    .text-field-wrap { margin-bottom:20px; position:relative; }
+    .text-field-icon {
+      position:absolute; left:14px; top:50%; transform:translateY(-50%);
+      width:20px; height:20px; fill:rgba(45,212,191,0.5); pointer-events:none;
+    }
+    .text-field {
+      width:100%; padding:14px 14px 14px 44px;
+      background:rgba(30,41,59,0.5); border:none; border-radius:16px;
+      color:var(--white); font-size:1rem; font-family:'Outfit',sans-serif;
+      outline:none; transition:0.2s;
+    }
+    .text-field:focus { box-shadow:0 0 0 1.5px rgba(45,212,191,0.5); }
+    .text-field::placeholder { color:var(--white38); }
+    .text-field-label {
+      display:block; font-size:0.875rem; color:rgba(255,255,255,0.7);
+      margin-bottom:6px;
+    }
+    /* Switch row */
+    .switch-row {
+      display:flex; align-items:center; justify-content:space-between;
+      background:rgba(30,41,59,0.5); border-radius:16px;
+      padding:12px 16px; margin-bottom:12px;
+    }
+    .switch-row span { font-size:1rem; }
+    .toggle { position:relative; width:48px; height:28px; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider {
+      position:absolute; inset:0; border-radius:28px;
+      background:var(--white20); cursor:pointer; transition:0.3s;
+    }
+    .toggle-slider:before {
+      content:''; position:absolute;
+      width:22px; height:22px; border-radius:50%;
+      background:white; left:3px; top:3px; transition:0.3s;
+    }
+    .toggle input:checked + .toggle-slider { background:var(--primary); }
+    .toggle input:checked + .toggle-slider:before { transform:translateX(20px); }
+    /* Dropdown */
+    .dropdown-wrap { margin-bottom:12px; }
+    .dropdown-label { font-size:1rem; color:var(--white); margin-bottom:8px; display:block; }
+    .dropdown-select {
+      width:100%; padding:14px 16px;
+      background:rgba(30,41,59,0.5); border:none; border-radius:16px;
+      color:var(--white); font-size:1rem; font-family:'Outfit',sans-serif;
+      outline:none; cursor:pointer; appearance:none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='%232DD4BF'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 14px center;
+      padding-right: 40px;
+    }
+    .dropdown-select option { background:var(--surface); }
+
+    /* ── RESULT SCREEN ── */
+    #result-screen { background:var(--bg); }
+    .result-body { flex:1; overflow-y:auto; padding:0 24px 48px; }
+    .diagnosis-card {
+      width:100%; padding:32px; border-radius:32px;
+      display:flex; flex-direction:column; align-items:center;
+      text-align:center; margin-bottom:24px;
+    }
+    .diagnosis-card svg { width:80px; height:80px; margin-bottom:24px; }
+    .diagnosis-name { font-size:2.25rem; font-weight:700; margin-bottom:8px; }
+    .stage-badge {
+      display:inline-block; padding:6px 16px; border-radius:20px;
+      font-weight:600; font-size:0.9rem; margin-bottom:16px;
+    }
+    .diagnosis-date { font-size:0.75rem; color:rgba(255,255,255,0.4); }
+    .info-card {
+      padding:24px; border-radius:24px;
+      background:rgba(30,41,59,0.5); margin-bottom:24px;
+    }
+    .info-card-title {
+      font-size:1.125rem; font-weight:700; margin-bottom:20px;
+    }
+    .conf-bar-row { margin-bottom:16px; }
+    .conf-bar-header { display:flex; justify-content:space-between; margin-bottom:8px; }
+    .conf-bar-header span:last-child { color:var(--primary); }
+    .conf-track {
+      height:6px; border-radius:4px; background:var(--white05);
+      overflow:hidden;
+    }
+    .conf-fill { height:100%; border-radius:4px; background:var(--primary); transition:width 0.8s ease; }
+    .rec-card {
+      padding:24px; border-radius:24px; margin-bottom:24px;
+      background:rgba(45,212,191,0.05);
+      border:1px solid rgba(45,212,191,0.1);
+    }
+    .rec-header {
+      display:flex; align-items:center; gap:12px; margin-bottom:16px;
+    }
+    .rec-header svg { width:22px; height:22px; fill:var(--primary); }
+    .rec-header span { font-size:1.125rem; font-weight:700; color:var(--primary); }
+    .rec-text { font-size:1rem; line-height:1.6; color:rgba(255,255,255,0.7); }
+    .disclaimer-card {
+      padding:20px; border-radius:20px; margin-bottom:24px;
+      background:rgba(255,193,7,0.06);
+      border:1px solid rgba(255,193,7,0.15);
+      display:flex; gap:12px;
+    }
+    .disclaimer-card svg { width:20px; height:20px; fill:rgba(255,193,7,0.7); flex-shrink:0; margin-top:2px; }
+    .disclaimer-title { font-size:0.875rem; font-weight:700; color:rgba(255,193,7,0.8); margin-bottom:8px; }
+    .disclaimer-text { font-size:0.8125rem; line-height:1.6; color:var(--white50); }
+    .model-version { text-align:center; font-size:0.6875rem; color:rgba(255,255,255,0.25); margin-bottom:32px; }
+
+    /* ── LOADING OVERLAY ── */
+    #loading-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.6); z-index:1000;
+      align-items:center; justify-content:center;
+    }
+    #loading-overlay.show { display:flex; }
+    .loading-dialog {
+      background:var(--surface); border-radius:24px; padding:32px;
+      border:1px solid rgba(45,212,191,0.2);
+      box-shadow:0 0 40px rgba(45,212,191,0.1);
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      min-width:280px; text-align:center;
+    }
+    .spinner-wrap { position:relative; width:80px; height:80px; margin-bottom:24px; }
+    .spinner {
+      width:80px; height:80px; border:3px solid rgba(45,212,191,0.1);
+      border-top-color:var(--primary); border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+    .spinner-icon {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    }
+    .spinner-icon svg { width:32px; height:32px; fill:var(--primary); }
+    .loading-title { font-size:1.25rem; font-weight:700; }
+    .loading-msg { color:var(--white50); font-size:0.875rem; min-height:20px; transition:0.3s; }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeIn { to { opacity:1; } }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(30px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .slide-up { animation:slideUp 0.4s ease forwards; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--white20); border-radius:4px; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+  SCREEN 1: SPLASH
+══════════════════════════════════════════════════ -->
+<div id="splash" class="screen active">
+  <div class="splash-content">
+    <div class="splash-icon-ring">
+      <svg viewBox="0 0 24 24"><path d="M12 1C6.48 1 2 5.48 2 11c0 3.54 1.85 6.67 4.64 8.49L12 23l5.36-3.51C20.15 17.67 22 14.54 22 11c0-5.52-4.48-10-10-10zm-1 14H9V9h2v6zm0-8H9V5h2v2zm4 8h-2V9h2v6zm0-8h-2V5h2v2z"/></svg>
+    </div>
+    <div class="splash-title">DiaGuard AI</div>
+    <div class="splash-sub">Your AI Health Companion</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  SCREEN 2: ONBOARDING
+══════════════════════════════════════════════════ -->
+<div id="onboarding" class="screen" style="position:relative;">
+  <button class="onboard-skip" onclick="goTo('login')">Skip</button>
+  <div class="onboard-slides">
+    <div class="onboard-slide active" id="slide-0">
+      <div class="onboard-icon-circle">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      </div>
+      <h2>AI-Powered Precision</h2>
+      <p>Built with a Leakage-Free Stacking Ensemble (v4.3.0)</p>
+    </div>
+    <div class="onboard-slide" id="slide-1">
+      <div class="onboard-icon-circle">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+      </div>
+      <h2>Complete Health Insights</h2>
+      <p>Understand your health stage—from healthy to critical—with detailed medical recommendations.</p>
+    </div>
+    <div class="onboard-slide" id="slide-2">
+      <div class="onboard-icon-circle">
+        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      </div>
+      <h2>Privacy First</h2>
+      <p>All your data stays local on your device. Secure, private, and always under your control.</p>
+    </div>
+  </div>
+  <div class="onboard-footer">
+    <div class="dots" id="dots">
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+    <button class="btn-primary" id="onboard-btn" onclick="onboardNext()">Next</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  SCREEN 3: LOGIN
+══════════════════════════════════════════════════ -->
+<div id="login" class="screen">
+  <div class="auth-scroll">
+    <div style="height:60px;"></div>
+    <div class="auth-icon-circle">
+      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+    </div>
+    <div class="auth-title">Welcome Back</div>
+    <div class="auth-sub">Sign in to continue your health journey</div>
+
+    <label class="field-label">Email Address</label>
+    <div class="field-wrap">
+      <svg class="field-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      <input class="auth-input" type="email" id="login-email" placeholder="you@example.com">
+    </div>
+
+    <label class="field-label">Password</label>
+    <div class="field-wrap">
+      <svg class="field-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      <input class="auth-input has-toggle" type="password" id="login-password" placeholder="••••••••">
+      <button class="field-toggle" onclick="togglePwd('login-password',this)">
+        <svg id="login-eye" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </button>
+    </div>
+    <div class="auth-error" id="login-error" style="display:none;"></div>
+
+    <button class="btn-full" onclick="handleLogin()">Sign In</button>
+    <div class="auth-switch">
+      <span>Don't have an account?</span>
+      <button onclick="goTo('signup')">Sign Up</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  SCREEN 4: SIGNUP
+══════════════════════════════════════════════════ -->
+<div id="signup" class="screen">
+  <div class="auth-scroll">
+    <button class="auth-back" onclick="goTo('login')">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </button>
+    <div class="auth-title">Create Account</div>
+    <div class="auth-sub">Join DiaGuard AI for personalized health tracking</div>
+
+    <label class="field-label">Full Name</label>
+    <div class="field-wrap">
+      <svg class="field-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <input class="auth-input" type="text" id="signup-name" placeholder="Jegede Temiloluwa">
+    </div>
+
+    <label class="field-label">Email Address</label>
+    <div class="field-wrap">
+      <svg class="field-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      <input class="auth-input" type="email" id="signup-email" placeholder="you@example.com">
+    </div>
+
+    <label class="field-label">Password</label>
+    <div class="field-wrap">
+      <svg class="field-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      <input class="auth-input has-toggle" type="password" id="signup-password" placeholder="••••••••">
+      <button class="field-toggle" onclick="togglePwd('signup-password',this)">
+        <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </button>
+    </div>
+
+    <button class="btn-full" onclick="handleSignup()">Create Account</button>
+    <div class="auth-switch">
+      <span>Already have an account?</span>
+      <button onclick="goTo('login')">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  SCREEN 5: INPUT / HEALTH PARAMETERS
+══════════════════════════════════════════════════ -->
+<div id="input-screen" class="screen">
+  <div class="app-bar">
+    <button class="app-bar-back" onclick="handleLogout()">
+      <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+    </button>
+    <h1>DiaGuard AI</h1>
+  </div>
+  <div class="input-body">
+    <div class="page-title">Health Parameters</div>
+    <div class="page-sub">Please fill in your current clinical data for prediction.</div>
+
+    <div class="section-header">Vital Stats</div>
+
+    <label class="text-field-label">Glucose (mg/dL)</label>
+    <div class="text-field-wrap">
+      <svg class="text-field-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      <input class="text-field" type="number" id="f-glucose" placeholder="e.g. 95" step="0.1">
+    </div>
+
+    <label class="text-field-label">Blood Pressure (mmHg)</label>
+    <div class="text-field-wrap">
+      <svg class="text-field-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+      <input class="text-field" type="number" id="f-bp" placeholder="e.g. 72">
+    </div>
+
+    <label class="text-field-label">Insulin (μU/mL)</label>
+    <div class="text-field-wrap">
+      <svg class="text-field-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+      <input class="text-field" type="number" id="f-insulin" placeholder="e.g. 80" step="0.1">
+    </div>
+
+    <label class="text-field-label">BMI (kg/m²)</label>
+    <div class="text-field-wrap">
+      <svg class="text-field-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      <input class="text-field" type="number" id="f-bmi" placeholder="e.g. 23.0" step="0.1">
+    </div>
+
+    <label class="text-field-label">Age (Years)</label>
+    <div class="text-field-wrap">
+      <svg class="text-field-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <input class="text-field" type="number" id="f-age" placeholder="e.g. 30">
+    </div>
+
+    <label class="text-field-label">HbA1c (%)</label>
+    <div class="text-field-wrap">
+      <svg class="text-field-icon" viewBox="0 0 24 24"><path d="M6 2v6l2 2-2 2v6l6-5 6 5v-6l-2-2 2-2V2l-6 5-6-5z"/></svg>
+      <input class="text-field" type="number" id="f-hba1c" placeholder="e.g. 5.2" step="0.1">
+    </div>
+
+    <div class="section-header">Medical History</div>
+    <div class="switch-row">
+      <span>Hypertension</span>
+      <label class="toggle"><input type="checkbox" id="f-hypertension"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="switch-row">
+      <span>Heart Disease</span>
+      <label class="toggle"><input type="checkbox" id="f-heartdisease"><span class="toggle-slider"></span></label>
+    </div>
+
+    <div class="section-header">Personal Details</div>
+    <div class="dropdown-wrap">
+      <span class="dropdown-label">Smoking History</span>
+      <select class="dropdown-select" id="f-smoking">
+        <option value="0">Never Smoked</option>
+        <option value="1">No Information</option>
+        <option value="2">Former Smoker</option>
+        <option value="3">Ever Smoked</option>
+        <option value="4">Currently Smoking</option>
+      </select>
+    </div>
+    <div class="dropdown-wrap">
+      <span class="dropdown-label">Gender</span>
+      <select class="dropdown-select" id="f-gender">
+        <option value="0">Female</option>
+        <option value="1">Male</option>
+      </select>
+    </div>
+
+    <div style="height:48px;"></div>
+    <button class="btn-full" onclick="submitPrediction()">Analyze with AI</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  SCREEN 6: RESULT
+══════════════════════════════════════════════════ -->
+<div id="result-screen" class="screen">
+  <div class="app-bar">
+    <button class="app-bar-back" onclick="goTo('input-screen')">
+      <svg viewBox="0 0 24 24"><path d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
+    </button>
+    <h1>AI Analysis Result</h1>
+  </div>
+  <div class="result-body">
+    <div class="diagnosis-card slide-up" id="result-diagnosis-card">
+      <!-- filled by JS -->
+    </div>
+    <div class="info-card slide-up" id="result-confidence">
+      <div class="info-card-title">AI Confidence Level</div>
+      <!-- filled by JS -->
+    </div>
+    <div class="rec-card slide-up" id="result-recommendation">
+      <div class="rec-header">
+        <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+        <span>Recommendation</span>
+      </div>
+      <div class="rec-text" id="result-rec-text"></div>
+    </div>
+    <div class="disclaimer-card slide-up" id="result-disclaimer" style="display:none;">
+      <svg viewBox="0 0 24 24"><path d="M11.5 2C6.81 2 3 5.81 3 10.5S6.81 19 11.5 19h.5v3c4.86-2.34 8-7 8-11.5C20 5.81 16.19 2 11.5 2zm1 14.5h-2v-2h2v2zm0-4h-2c0-3.25 3-3 3-5 0-1.1-.9-2-2-2s-2 .9-2 2h-2c0-2.21 1.79-4 4-4s4 1.79 4 4c0 2.5-3 2.75-3 5z"/></svg>
+      <div>
+        <div class="disclaimer-title">Clinical Note</div>
+        <div class="disclaimer-text" id="result-disclaimer-text"></div>
+      </div>
+    </div>
+    <div class="model-version" id="result-model-version"></div>
+    <button class="btn-full" onclick="goTo('input-screen')">Back to Dashboard</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  LOADING OVERLAY
+══════════════════════════════════════════════════ -->
+<div id="loading-overlay">
+  <div class="loading-dialog">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <div class="spinner-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      </div>
+    </div>
+    <div class="loading-title">AI is Analyzing...</div>
+    <div class="loading-msg" id="loading-msg">Initializing AI engine...</div>
+  </div>
+</div>
+
+<script>
+  // ── STATE ──
+  let currentScreen = 'splash';
+  let onboardPage   = 0;
+  const TOTAL_SLIDES = 3;
+  let loadingInterval = null;
+
+  const LOADING_MSGS = [
+    'Initializing AI engine...',
+    'Analyzing clinical patterns...',
+    'Running Advanced ML models...',
+    'Optimizing prediction results...',
+    'Generating health insights...',
+  ];
+
+  // ── NAVIGATION ──
+  function goTo(id) {
+    document.getElementById(currentScreen).classList.remove('active');
+    document.getElementById(id).classList.add('active');
+    currentScreen = id;
+  }
+
+  // ── SPLASH → check auth ──
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const isLoggedIn = localStorage.getItem('dg_user');
+      const onboarded  = localStorage.getItem('dg_onboarded');
+      if (isLoggedIn) goTo('input-screen');
+      else if (onboarded) goTo('login');
+      else goTo('onboarding');
+    }, 3000);
+  });
+
+  // ── ONBOARDING ──
+  function onboardNext() {
+    if (onboardPage < TOTAL_SLIDES - 1) {
+      document.getElementById('slide-' + onboardPage).classList.remove('active');
+      onboardPage++;
+      document.getElementById('slide-' + onboardPage).classList.add('active');
+      updateDots();
+      if (onboardPage === TOTAL_SLIDES - 1)
+        document.getElementById('onboard-btn').textContent = 'Get Started';
+    } else {
+      localStorage.setItem('dg_onboarded', '1');
+      goTo('login');
+    }
+  }
+
+  function updateDots() {
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.toggle('active', i === onboardPage);
+    });
+  }
+
+  // ── PASSWORD TOGGLE ──
+  function togglePwd(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.querySelector('svg').innerHTML = isHidden
+      ? '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>'
+      : '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+  }
+
+  // ── AUTH ──
+  function handleLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-password').value;
+    const err   = document.getElementById('login-error');
+    if (!email || !pass) { showError(err, 'Please fill all fields.'); return; }
+    const users = JSON.parse(localStorage.getItem('dg_users') || '{}');
+    if (users[email] && users[email].password === pass) {
+      localStorage.setItem('dg_user', JSON.stringify({email, name: users[email].name}));
+      err.style.display = 'none';
+      goTo('input-screen');
+    } else {
+      showError(err, 'Invalid email or password');
+    }
+  }
+
+  function handleSignup() {
+    const name  = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const pass  = document.getElementById('signup-password').value;
+    if (!name || !email || !pass) { alert('Please fill all fields.'); return; }
+    const users = JSON.parse(localStorage.getItem('dg_users') || '{}');
+    users[email] = { name, password: pass };
+    localStorage.setItem('dg_users', JSON.stringify(users));
+    localStorage.setItem('dg_user', JSON.stringify({email, name}));
+    goTo('input-screen');
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('dg_user');
+    goTo('login');
+  }
+
+  function showError(el, msg) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  // ── PREDICTION ──
+  async function submitPrediction() {
+    const fields = ['f-glucose','f-bp','f-insulin','f-bmi','f-age','f-hba1c'];
+    for (const id of fields) {
+      if (!document.getElementById(id).value) {
+        alert('Please fill all Vital Stats fields.'); return;
+      }
+    }
+    showLoading(true);
+    const payload = {
+      Glucose:      parseFloat(document.getElementById('f-glucose').value),
+      BloodPressure:parseFloat(document.getElementById('f-bp').value),
+      Insulin:      parseFloat(document.getElementById('f-insulin').value),
+      BMI:          parseFloat(document.getElementById('f-bmi').value),
+      Age:          parseFloat(document.getElementById('f-age').value),
+      HbA1c:        parseFloat(document.getElementById('f-hba1c').value),
+      Hypertension: document.getElementById('f-hypertension').checked ? 1 : 0,
+      HeartDisease: document.getElementById('f-heartdisease').checked ? 1 : 0,
+      Smoking:      parseInt(document.getElementById('f-smoking').value),
+      Gender:       parseInt(document.getElementById('f-gender').value),
+    };
+    try {
+      const res = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // The server responded but returned an error (e.g. 503 models not loaded)
+        showLoading(false);
+        alert('Server error: ' + (data.detail || 'Something went wrong. Please try again.'));
+        return;
+      }
+
+      if (!data.diagnosis) {
+        showLoading(false);
+        alert('Unexpected response from the server. Please try again.');
+        return;
+      }
+
+      showLoading(false);
+      renderResult(data);
+      goTo('result-screen');
+    } catch(e) {
+      showLoading(false);
+      alert('Connection Error: Could not reach the API. Make sure the server is running.');
+    }
+  }
+
+  function showLoading(show) {
+    const overlay = document.getElementById('loading-overlay');
+    const msgEl   = document.getElementById('loading-msg');
+    if (show) {
+      overlay.classList.add('show');
+      let idx = 0;
+      msgEl.textContent = LOADING_MSGS[0];
+      loadingInterval = setInterval(() => {
+        idx = (idx + 1) % LOADING_MSGS.length;
+        msgEl.textContent = LOADING_MSGS[idx];
+      }, 1500);
+    } else {
+      overlay.classList.remove('show');
+      clearInterval(loadingInterval);
+    }
+  }
+
+  function renderResult(data) {
+    // Diagnosis Card
+    const diag = data.diagnosis || 'Unknown';
+    let color, iconPath;
+    if (diag === 'Healthy') {
+      color = '#69F0AE';
+      iconPath = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>';
+    } else if (diag === 'At Risk') {
+      color = '#FFA726';
+      iconPath = '<path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>';
+    } else {
+      color = '#EF5350';
+      iconPath = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>';
+    }
+    const date = data.timestamp ? new Date(data.timestamp).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'2-digit'}) : new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'2-digit'});
+    document.getElementById('result-diagnosis-card').innerHTML = `
+      <svg style="fill:${color}" viewBox="0 0 24 24">${iconPath}</svg>
+      <div class="diagnosis-name" style="color:${color}">${diag}</div>
+      <div class="stage-badge" style="background:${color}1A;color:${color}">Stage: ${data.stage || 'Unknown'}</div>
+      <div class="diagnosis-date">Analyzing date: ${date}</div>
+    `;
+    document.getElementById('result-diagnosis-card').style.background = `linear-gradient(135deg, ${color}33 0%, transparent 100%)`;
+    document.getElementById('result-diagnosis-card').style.border = `1px solid ${color}4D`;
+
+    // Confidence Bars
+    const confEl = document.getElementById('result-confidence');
+    const confHTML = Object.entries(data.confidence || {}).map(([label, val]) => `
+      <div class="conf-bar-row">
+        <div class="conf-bar-header"><span>${label}</span><span>${val.toFixed(1)}%</span></div>
+        <div class="conf-track"><div class="conf-fill" style="width:${val}%;background:${val>50?'var(--primary)':'rgba(255,255,255,0.2)'}"></div></div>
+      </div>`).join('');
+    confEl.innerHTML = `<div class="info-card-title">AI Confidence Level</div>${confHTML}`;
+
+    // Recommendation
+    document.getElementById('result-rec-text').textContent = data.recommendation || '';
+
+    // Disclaimer
+    const disc = data.disclaimer || data.scientific_disclaimer;
+    if (disc) {
+      document.getElementById('result-disclaimer').style.display = 'flex';
+      document.getElementById('result-disclaimer-text').textContent = disc;
+    } else {
+      document.getElementById('result-disclaimer').style.display = 'none';
+    }
+
+    // Model version
+    const mv = document.getElementById('result-model-version');
+    mv.textContent = data.model_version ? `Model: ${data.model_version}` : '';
+  }
+</script>
+</body>
+</html>

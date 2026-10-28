@@ -1,0 +1,13 @@
+Detailed Classification Report: Stage
+==================================================
+              precision    recall  f1-score   support
+
+     Healthy       0.90      0.97      0.94       948
+Pre-Diabetic       0.74      0.90      0.81       652
+     Stage 1       0.87      0.69      0.77       705
+     Stage 2       0.95      0.87      0.91       702
+     Stage 3       1.00      1.00      1.00       395
+
+    accuracy                           0.88      3402
+   macro avg       0.89      0.89      0.89      3402
+weighted avg       0.89      0.88      0.88      3402

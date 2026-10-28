@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: diabetes-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python hybrid_train_final.py
+    startCommand: uvicorn diabetes_api:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true

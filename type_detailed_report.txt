@@ -1,0 +1,12 @@
+Detailed Classification Report: Type
+==================================================
+              precision    recall  f1-score   support
+
+     At Risk       0.73      0.89      0.80       692
+     Healthy       0.93      0.98      0.95       908
+      Type 1       0.98      0.80      0.88        69
+      Type 2       0.94      0.84      0.89      1733
+
+    accuracy                           0.89      3402
+   macro avg       0.90      0.88      0.88      3402
+weighted avg       0.90      0.89      0.89      3402
